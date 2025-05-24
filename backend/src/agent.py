@@ -55,7 +55,7 @@ def url_content_fetcher(url: str) -> Dict:
         
         return {
             "status": "success",
-            "content": main_content[:500],  # Truncate for token limits
+            "content": main_content[:50],  # Truncate for token limits
             "charset": response.encoding,
             "status_code": response.status_code
         }

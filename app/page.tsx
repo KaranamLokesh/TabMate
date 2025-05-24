@@ -44,7 +44,74 @@ const categoryIcons = {
   News: Globe,
   Other: FolderOpen,
 }
-
+const mockTabs: Tab[] = [
+  {
+    id: "1",
+    title: "GitHub - AI Tab Manager",
+    url: "https://github.com/user/ai-tab-manager",
+    favicon: "🐙",
+    category: "Work",
+    isActive: true,
+  },
+  {
+    id: "2",
+    title: "OpenAI API Documentation",
+    url: "https://platform.openai.com/docs",
+    favicon: "🤖",
+    category: "Work",
+  },
+  {
+    id: "3",
+    title: "React Documentation",
+    url: "https://react.dev",
+    favicon: "⚛️",
+    category: "Work",
+  },
+  {
+    id: "4",
+    title: "YouTube - AI Explained",
+    url: "https://youtube.com/watch?v=ai-video",
+    favicon: "📺",
+    category: "Entertainment",
+    isDistraction: true,
+  },
+  {
+    id: "5",
+    title: "YouTube - Music Playlist",
+    url: "https://youtube.com/playlist/music",
+    favicon: "📺",
+    category: "Entertainment",
+    isDuplicate: true,
+  },
+  {
+    id: "6",
+    title: "Amazon - Laptop Stand",
+    url: "https://amazon.com/laptop-stand",
+    favicon: "📦",
+    category: "Shopping",
+  },
+  {
+    id: "7",
+    title: "Medium - AI Research Paper",
+    url: "https://medium.com/ai-research",
+    favicon: "📝",
+    category: "Research",
+  },
+  {
+    id: "8",
+    title: "ArXiv - Machine Learning",
+    url: "https://arxiv.org/abs/ml-paper",
+    favicon: "📄",
+    category: "Research",
+  },
+  {
+    id: "9",
+    title: "Spotify Web Player",
+    url: "https://open.spotify.com",
+    favicon: "🎵",
+    category: "Entertainment",
+  },
+]
 const categoryColors = {
   Work: "bg-blue-100 text-blue-800 border-blue-200",
   Research: "bg-purple-100 text-purple-800 border-purple-200",
@@ -84,6 +151,8 @@ export default function TabMateUI() {
   const commandInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Add these state variables
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Example list of URLs to send to backend
   const urlList = [
@@ -111,6 +180,7 @@ export default function TabMateUI() {
         setLoading(false)
       })
   }, [])
+
 
   // Group tabs by category
   const groupedTabs = tabs.reduce(
@@ -186,17 +256,42 @@ export default function TabMateUI() {
     }
   }, [command])
 
-  const handleCommand = (cmd: string) => {
-    // Simulate AI command processing
-    const newCommand: AICommand = {
-      text: cmd,
-      timestamp: new Date(),
-      result: `Processed: ${cmd}`,
+  // Replace the existing handleCommand with this
+  const handleCommand = async (cmd: string) => {
+    setIsProcessing(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          command: cmd,
+          currentTabs: tabs
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Command failed: ${response.status}`);
+      }
+
+      const updatedTabs = await response.json();
+      setTabs(updatedTabs);
+      
+      // Add to command history
+      setCommandHistory(prev => [{
+        text: cmd,
+        timestamp: new Date(),
+        result: "Processed successfully"
+      }, ...prev.slice(0, 9)]);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to execute command');
+    } finally {
+      setIsProcessing(false);
+      setCommand("");
     }
-    setCommandHistory((prev) => [newCommand, ...prev.slice(0, 9)])
-    setCommand("")
-    setShowCommandPalette(false)
-  }
+  };
 
   const toggleVoiceInput = () => {
     setIsListening(!isListening)
