@@ -88,7 +88,7 @@ def qdrant_store_tool(content: str, metadata: MetadataModel) -> Dict:
     
     client = QdrantClient(
         url="https://f143978d-3f60-4e78-959d-217258b83698.europe-west3-0.gcp.cloud.qdrant.io:6333",
-        api_key=".eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
+        api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
     )
     if not client.collection_exists("tabmate_docs"):
         client.create_collection(
@@ -118,7 +118,7 @@ async def url_categorizer_tool(query: Optional[str] = None, limit: int = 50) -> 
     """Dynamic URL categorizer using pure LLM analysis of vector store contents"""
     client = QdrantClient(
         url="https://f143978d-3f60-4e78-959d-217258b83698.europe-west3-0.gcp.cloud.qdrant.io:6333",
-        api_key=".eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
+        api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
     )
     
     # 1. Retrieve stored documents
@@ -163,7 +163,7 @@ async def url_categorizer_tool(query: Optional[str] = None, limit: int = 50) -> 
     
     async def process_record(record):
         url = record.payload['source']
-        content = record.payload.get('content', '')[:500]  # Truncate for tokens
+        content = record.payload.get('content', '')[:50]  # Truncate for tokens
         
         try:
             response = await chain.ainvoke({"url": url, "content": content})
@@ -191,20 +191,21 @@ class TabMateAgent:
         agent = Agent(
             name="TabMateProcessor",
             instructions="Process URLs through MCP pipeline",
-            tools=[ url_content_fetcher, qdrant_store_tool, url_categorizer_tool],
-            model="gpt-3.5-turbo-1106"
+            tools=[ url_content_fetcher, url_categorizer_tool],
+            model="gpt-4o-mini"
         )
         
         result = await Runner.run(
             agent,
             f"""
             Process these URLs: {urls}
-            1. Scrape content using url content fetcher
-            2. Store the fetched content in qdrant vector db
-            3. Go over the content in the qdrant db and categorize the urls based on their contents
-            4. Give me a json structure that has the id, title of the web page, a favicon, the url, and the category 
-            5. For each URL, return a list of JSON objects with the following keys: id, title, favicon, url, category.
+            1. Scrape content using url content fetcher 
+            2. Go over the content that you have scraped and categorize the urls based on their contents
+            3. Give me a json structure that has the id which is string, title of the web page, a favicon, the url, and the category 
+            4. For each URL, return a list of JSON objects with the following keys: id, title, favicon, url, category.
                 Respond ONLY with the JSON array, nothing else.
+            
+]
             """
         )
         return result.final_output
