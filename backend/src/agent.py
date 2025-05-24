@@ -192,7 +192,7 @@ class TabMateAgent:
             name="TabMateProcessor",
             instructions="Process URLs through MCP pipeline",
             tools=[ url_content_fetcher, qdrant_store_tool, url_categorizer_tool],
-            model="gpt-4o-mini"
+            model="gpt-3.5-turbo-1106"
         )
         
         result = await Runner.run(
@@ -202,7 +202,9 @@ class TabMateAgent:
             1. Scrape content using url content fetcher
             2. Store the fetched content in qdrant vector db
             3. Go over the content in the qdrant db and categorize the urls based on their contents
-            4. Give me a json structure that has the title of the web page, the url, and the category 
+            4. Give me a json structure that has the id, title of the web page, a favicon, the url, and the category 
+            5. For each URL, return a list of JSON objects with the following keys: id, title, favicon, url, category.
+                Respond ONLY with the JSON array, nothing else.
             """
         )
         return result.final_output

@@ -1,30 +1,45 @@
-# backend/app.py - Modified Structure
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import uuid
 import asyncio
-
-# Add your agent components
 from src.agent import TabMateAgent
 
-app = FastAPI()
+app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
-# CORS Configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-class UrlRequest(BaseModel):
-    urls: list[str]
-
-@app.post("/process-urls")
-async def process_urls_endpoint(request: UrlRequest):
+@app.route('/api/categorize', methods=['POST', 'OPTIONS'])
+def categorize_urls():
+    if request.method == 'OPTIONS':
+        headers = {
+            'Access-Control-Allow-Origin': 'http://localhost:3000',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+        }
+        return ('', 204, headers)
+    
     try:
-        agent = TabMateAgent()
-        result = await agent.process_urls(request.urls)
-        return {"status": "success", "data": result}
+        data = request.get_json()
+        urls = data.get('urls', [])
+        
+        # Run async agent processing
+        processor = TabMateAgent()
+        result = asyncio.run(processor.process_urls(urls))
+        
+        # Transform agent output to match frontend structure
+        formatted_response = []
+        for item in result:
+            formatted_response.append({
+                "id": str(uuid.uuid4()),
+                "title": item.get('title', f"Title for {item['url']}"),
+                "url": item['url'],
+                "favicon": item.get('favicon', '📦'),
+                "category": item['category']
+            })
+        print(formatted_response)
+        return jsonify(formatted_response)
+    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(port=5000)

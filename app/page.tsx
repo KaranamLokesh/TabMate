@@ -2,27 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import {
-  Search,
-  Brain,
-  Zap,
-  Trash2,
-  FolderOpen,
-  Globe,
-  Monitor,
-  Coffee,
-  BookOpen,
-  ShoppingCart,
-  Music,
-  Settings,
-  Plus,
-  X,
-  ExternalLink,
-  Mic,
-  MicOff,
-  CommandIcon,
-  Clock,
-  Lightbulb,
-  ArrowRight,
+  Search, Brain, Zap, Trash2, FolderOpen, Globe, Monitor, Coffee, BookOpen, ShoppingCart, Music, Settings, Plus, X, ExternalLink, Mic, MicOff, CommandIcon, Clock, Lightbulb, ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,75 +34,6 @@ interface AICommand {
   timestamp: Date
   result?: string
 }
-
-const mockTabs: Tab[] = [
-  {
-    id: "1",
-    title: "GitHub - AI Tab Manager",
-    url: "https://github.com/user/ai-tab-manager",
-    favicon: "🐙",
-    category: "Work",
-    isActive: true,
-  },
-  {
-    id: "2",
-    title: "OpenAI API Documentation",
-    url: "https://platform.openai.com/docs",
-    favicon: "🤖",
-    category: "Work",
-  },
-  {
-    id: "3",
-    title: "React Documentation",
-    url: "https://react.dev",
-    favicon: "⚛️",
-    category: "Work",
-  },
-  {
-    id: "4",
-    title: "YouTube - AI Explained",
-    url: "https://youtube.com/watch?v=ai-video",
-    favicon: "📺",
-    category: "Entertainment",
-    isDistraction: true,
-  },
-  {
-    id: "5",
-    title: "YouTube - Music Playlist",
-    url: "https://youtube.com/playlist/music",
-    favicon: "📺",
-    category: "Entertainment",
-    isDuplicate: true,
-  },
-  {
-    id: "6",
-    title: "Amazon - Laptop Stand",
-    url: "https://amazon.com/laptop-stand",
-    favicon: "📦",
-    category: "Shopping",
-  },
-  {
-    id: "7",
-    title: "Medium - AI Research Paper",
-    url: "https://medium.com/ai-research",
-    favicon: "📝",
-    category: "Research",
-  },
-  {
-    id: "8",
-    title: "ArXiv - Machine Learning",
-    url: "https://arxiv.org/abs/ml-paper",
-    favicon: "📄",
-    category: "Research",
-  },
-  {
-    id: "9",
-    title: "Spotify Web Player",
-    url: "https://open.spotify.com",
-    favicon: "🎵",
-    category: "Entertainment",
-  },
-]
 
 const categoryIcons = {
   Work: Monitor,
@@ -164,13 +75,42 @@ const smartSuggestions = [
 
 export default function TabMateUI() {
   const [command, setCommand] = useState("")
-  const [tabs, setTabs] = useState<Tab[]>(mockTabs)
+  const [tabs, setTabs] = useState<Tab[]>([])
   const [selectedTabs, setSelectedTabs] = useState<string[]>([])
   const [commandHistory, setCommandHistory] = useState<AICommand[]>([])
   const [showCommandPalette, setShowCommandPalette] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const commandInputRef = useRef<HTMLInputElement>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Example list of URLs to send to backend
+  const urlList = [
+    "https://medium.com/ai-research"
+  ]
+
+  // Fetch categorized tabs from backend on mount
+  useEffect(() => {
+    setLoading(true)
+    fetch("http://127.0.0.1:5000/api/categorize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ urls: urlList }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to fetch tabs from backend")
+        const data = await res.json()
+        setTabs(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
 
   // Group tabs by category
   const groupedTabs = tabs.reduce(
@@ -254,7 +194,6 @@ export default function TabMateUI() {
       result: `Processed: ${cmd}`,
     }
     setCommandHistory((prev) => [newCommand, ...prev.slice(0, 9)])
-    console.log("Processing command:", cmd)
     setCommand("")
     setShowCommandPalette(false)
   }
@@ -404,7 +343,6 @@ export default function TabMateUI() {
                   <span>⌘K</span>
                 </Button>
               </div>
-
               <div className="relative">
                 <div className="flex space-x-2">
                   <div className="flex-1 relative">
@@ -466,7 +404,8 @@ export default function TabMateUI() {
               Your tabs have been automatically organized by AI into {tabGroups.length} categories
             </p>
           </div>
-
+          {loading && <div>Loading tabs from backend...</div>}
+          {error && <div className="text-red-600">Error: {error}</div>}
           <div className="space-y-6">
             {tabGroups.map((group) => {
               const IconComponent = group.icon
