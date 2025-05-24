@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import uuid
 import asyncio
-from src.agent import TabMateAgent
+from src import agent
 import re
 import json
 from openai import OpenAI  # Or your preferred LLM client
@@ -41,22 +41,21 @@ def categorize_urls():
         urls = data.get('urls', [])
         
         # Run async agent processing
-        processor = TabMateAgent()
-        result = asyncio.run(processor.process_urls(urls))
+        result =agent.url_content_fetcher(urls)
         # Transform agent output to match frontend structure
-        response = extract_json_array(result)
-        print(response)
+        # response = extract_json_array(result)
+        print(result)
+        parsed_list = [json.loads(item) for item in result]
         formatted_response = []
-        for item in response:
-            formatted_response.append({
-                "id": str(uuid.uuid4()),
-                "title": item.get('title', f"Title for {item['url']}"),
-                "url": item['url'],
-                "favicon": item.get('favicon', '📦'),
-                "category": item['category']
-            })
+        # for item in result:
+        #     formatted_response.append({
+        #         "id": str(uuid.uuid4()),
+        #         "title": item.get('title', f"Title for {item['url']}"),
+        #         "url": item['url'],
+        #         "category": item['category']
+        #     })
         
-        return jsonify(formatted_response)
+        return jsonify(parsed_list)
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -82,6 +81,7 @@ def handle_command():
 
         # Step 1: Generate filter logic using LLM
         system_prompt = """You are a data filtering assistant. Convert user commands into JSON filters.
+        Users may not enter the exact query. Be creative and try to do what user says even when they dont explicitly tell you what to do
         Available fields: id, title, url, category
         Example commands:
         - "Remove music tabs" => {"exclude": {"category": "Music"}}

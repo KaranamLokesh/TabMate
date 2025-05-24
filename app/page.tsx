@@ -15,7 +15,6 @@ interface Tab {
   id: string
   title: string
   url: string
-  favicon: string
   category: string
   isActive?: boolean
   isDuplicate?: boolean
@@ -44,74 +43,74 @@ const categoryIcons = {
   News: Globe,
   Other: FolderOpen,
 }
-const mockTabs: Tab[] = [
-  {
-    id: "1",
-    title: "GitHub - AI Tab Manager",
-    url: "https://github.com/user/ai-tab-manager",
-    favicon: "🐙",
-    category: "Work",
-    isActive: true,
-  },
-  {
-    id: "2",
-    title: "OpenAI API Documentation",
-    url: "https://platform.openai.com/docs",
-    favicon: "🤖",
-    category: "Work",
-  },
-  {
-    id: "3",
-    title: "React Documentation",
-    url: "https://react.dev",
-    favicon: "⚛️",
-    category: "Work",
-  },
-  {
-    id: "4",
-    title: "YouTube - AI Explained",
-    url: "https://youtube.com/watch?v=ai-video",
-    favicon: "📺",
-    category: "Entertainment",
-    isDistraction: true,
-  },
-  {
-    id: "5",
-    title: "YouTube - Music Playlist",
-    url: "https://youtube.com/playlist/music",
-    favicon: "📺",
-    category: "Entertainment",
-    isDuplicate: true,
-  },
-  {
-    id: "6",
-    title: "Amazon - Laptop Stand",
-    url: "https://amazon.com/laptop-stand",
-    favicon: "📦",
-    category: "Shopping",
-  },
-  {
-    id: "7",
-    title: "Medium - AI Research Paper",
-    url: "https://medium.com/ai-research",
-    favicon: "📝",
-    category: "Research",
-  },
-  {
-    id: "8",
-    title: "ArXiv - Machine Learning",
-    url: "https://arxiv.org/abs/ml-paper",
-    favicon: "📄",
-    category: "Research",
-  },
-  {
-    id: "9",
-    title: "Spotify Web Player",
-    url: "https://open.spotify.com",
-    favicon: "🎵",
-    category: "Entertainment",
-  },
-]
+// const mockTabs: Tab[] = [
+//   {
+//     id: "1",
+//     title: "GitHub - AI Tab Manager",
+//     url: "https://github.com/user/ai-tab-manager",
+//     favicon: "🐙",
+//     category: "Work",
+//     isActive: true,
+//   },
+//   {
+//     id: "2",
+//     title: "OpenAI API Documentation",
+//     url: "https://platform.openai.com/docs",
+//     favicon: "🤖",
+//     category: "Work",
+//   },
+//   {
+//     id: "3",
+//     title: "React Documentation",
+//     url: "https://react.dev",
+//     favicon: "⚛️",
+//     category: "Work",
+//   },
+//   {
+//     id: "4",
+//     title: "YouTube - AI Explained",
+//     url: "https://youtube.com/watch?v=ai-video",
+//     favicon: "📺",
+//     category: "Entertainment",
+//     isDistraction: true,
+//   },
+//   {
+//     id: "5",
+//     title: "YouTube - Music Playlist",
+//     url: "https://youtube.com/playlist/music",
+//     favicon: "📺",
+//     category: "Entertainment",
+//     isDuplicate: true,
+//   },
+//   {
+//     id: "6",
+//     title: "Amazon - Laptop Stand",
+//     url: "https://amazon.com/laptop-stand",
+//     favicon: "📦",
+//     category: "Shopping",
+//   },
+//   {
+//     id: "7",
+//     title: "Medium - AI Research Paper",
+//     url: "https://medium.com/ai-research",
+//     favicon: "📝",
+//     category: "Research",
+//   },
+//   {
+//     id: "8",
+//     title: "ArXiv - Machine Learning",
+//     url: "https://arxiv.org/abs/ml-paper",
+//     favicon: "📄",
+//     category: "Research",
+//   },
+//   {
+//     id: "9",
+//     title: "Spotify Web Player",
+//     url: "https://open.spotify.com",
+//     favicon: "🎵",
+//     category: "Entertainment",
+//   },
+// ]
 const categoryColors = {
   Work: "bg-blue-100 text-blue-800 border-blue-200",
   Research: "bg-purple-100 text-purple-800 border-purple-200",
@@ -156,7 +155,10 @@ export default function TabMateUI() {
 
   // Example list of URLs to send to backend
   const urlList = [
-    "https://medium.com/ai-research"
+    "https://medium.com/ai-research",
+    "https://www.scrapingbee.com/blog/how-to-scrape-all-text-from-a-website-for-llm-ai-training/",
+    "https://www.youtube.com/watch?v=woixU_OwOuI",
+    "https://www.youtube.com/watch?v=woixU_OwOuI"
   ]
 
   // Fetch categorized tabs from backend on mount
@@ -530,11 +532,6 @@ export default function TabMateUI() {
                           }`}
                           onClick={() => toggleTabSelection(tab.id)}
                         >
-                          <div className="flex-shrink-0">
-                            <div className="w-8 h-8 rounded bg-white border border-gray-200 flex items-center justify-center text-sm">
-                              {tab.favicon}
-                            </div>
-                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2">
                               <p className="text-sm font-medium text-gray-900 truncate">{tab.title}</p>

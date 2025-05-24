@@ -1,0 +1,29 @@
+{
+    "name": "TabMate Controller",
+    "version": "1.0",
+    "manifest_version": 3,
+    "permissions": ["tabs", "scripting", "activeTab"],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup/popup.html",
+      "default_icon": {
+        "128": "icons/icon128.png"
+      }
+    },
+    "icons": {
+      "128": "icons/icon128.png"
+    },
+        "externally_connectable": {
+          "matches": [
+            "http://localhost:*/*",
+            "http://127.0.0.1:*/*"
+          ]
+        },
+        "host_permissions": [
+          "http://localhost:*/*",
+          "http://127.0.0.1:*/*"
+        ]
+  }
+  
