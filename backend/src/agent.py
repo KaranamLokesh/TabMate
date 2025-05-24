@@ -88,7 +88,7 @@ def qdrant_store_tool(content: str, metadata: MetadataModel) -> Dict:
     
     client = QdrantClient(
         url="https://f143978d-3f60-4e78-959d-217258b83698.europe-west3-0.gcp.cloud.qdrant.io:6333",
-        api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
+        api_key=".eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
     )
     if not client.collection_exists("tabmate_docs"):
         client.create_collection(
@@ -118,7 +118,7 @@ async def url_categorizer_tool(query: Optional[str] = None, limit: int = 50) -> 
     """Dynamic URL categorizer using pure LLM analysis of vector store contents"""
     client = QdrantClient(
         url="https://f143978d-3f60-4e78-959d-217258b83698.europe-west3-0.gcp.cloud.qdrant.io:6333",
-        api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
+        api_key=".eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
     )
     
     # 1. Retrieve stored documents
