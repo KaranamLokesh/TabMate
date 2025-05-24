@@ -1,0 +1,224 @@
+# src/agent.py
+from agents import Agent, Runner, function_tool
+from typing import List, Dict, Optional
+import requests
+from qdrant_client import QdrantClient
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+import yaml
+from typing import List
+from langchain_core.prompts import ChatPromptTemplate
+import asyncio
+from typing import Dict
+import requests
+from requests.exceptions import RequestException
+from bs4 import BeautifulSoup
+from agents import function_tool
+import uuid
+from qdrant_client.http import models
+from pydantic import BaseModel, Field  # Added for schema definition
+from dotenv import load_dotenv
+
+
+load_dotenv()
+# 1. Define strict input models for tool parameters
+class MetadataModel(BaseModel):
+    source: str = Field(..., description="URL source of the content")
+    timestamp: float = Field(..., description="Unix timestamp of ingestion")
+
+@function_tool(
+    name_override="url_content_fetcher", 
+)
+def url_content_fetcher(url: str) -> Dict:
+    """Robust web content fetcher with anti-blocking features"""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    try:
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=10,
+            allow_redirects=True
+        )
+        response.raise_for_status()
+
+        # Extract main content using BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Remove unnecessary elements
+        for element in soup(['script', 'style', 'nav', 'footer', 'header']):
+            element.decompose()
+        
+        main_content = soup.get_text(separator='\n', strip=True)
+        
+        return {
+            "status": "success",
+            "content": main_content[:500],  # Truncate for token limits
+            "charset": response.encoding,
+            "status_code": response.status_code
+        }
+
+    except RequestException as e:
+        return {
+            "status": "error",
+            "message": f"Request failed: {str(e)}",
+            "url": url
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Processing error: {str(e)}",
+            "url": url
+        }
+
+
+
+@function_tool(
+    name_override="qdrant_store",
+
+)
+def qdrant_store_tool(content: str, metadata: MetadataModel) -> Dict:
+    embeddings = OpenAIEmbeddings(
+        model="text-embedding-3-large",
+        dimensions=1536
+    )
+    vector = embeddings.embed_query(content)
+    
+    client = QdrantClient(
+        url="https://f143978d-3f60-4e78-959d-217258b83698.europe-west3-0.gcp.cloud.qdrant.io:6333",
+        api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
+    )
+    if not client.collection_exists("tabmate_docs"):
+        client.create_collection(
+            collection_name="tabmate_docs",
+            vectors_config=models.VectorParams(
+                size=1536,  # Must match embedding dimensions
+                distance=models.Distance.COSINE
+            )
+    )
+    
+    client.upsert(
+        collection_name="tabmate_docs",
+        points=[
+            {
+                "id": str(uuid.uuid4()),
+                "vector": vector,
+                "payload": metadata.dict()  # Convert Pydantic model to dict
+            }
+        ]
+    )
+    return {"status": "success", "stored_items": 1}
+
+@function_tool(
+    name_override="url_categorizer",
+)
+async def url_categorizer_tool(query: Optional[str] = None, limit: int = 50) -> Dict[str, List[str]]:
+    """Dynamic URL categorizer using pure LLM analysis of vector store contents"""
+    client = QdrantClient(
+        url="https://f143978d-3f60-4e78-959d-217258b83698.europe-west3-0.gcp.cloud.qdrant.io:6333",
+        api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.Y4ZeWH1Epo4RgM7ChA8TZA5CyjpeiPyfD-pYSegN5Oo"
+    )
+    
+    # 1. Retrieve stored documents
+    records, _ = client.scroll(
+        collection_name="tabmate_docs",
+        with_payload=True,
+        limit=limit,
+        query_filter=models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="metadata.source",
+                    match=models.MatchValue(value=query)
+                ) if query else None
+            ]
+        ) if query else None
+    )
+    
+    # 2. Set up LLM chain
+    llm = ChatOpenAI(model="gpt-4o-mini")
+    prompt = ChatPromptTemplate.from_template("""
+    Analyze this URL and content snippet. Categorize it into one of these types:
+    - Technical Documentation
+    - E-commerce/Shopping
+    - Video/Multimedia
+    - Social Media
+    - News/Articles
+    - Educational Resources
+    - Productivity Tools
+    - Entertainment
+    - Other
+
+    URL: {url}
+    Content: {content}
+    
+    Respond ONLY with the category name.
+    """)
+    
+    chain = prompt | llm
+    
+    # 3. Process in parallel batches
+    categorized = defaultdict(list)
+    
+    async def process_record(record):
+        url = record.payload['source']
+        content = record.payload.get('content', '')[:500]  # Truncate for tokens
+        
+        try:
+            response = await chain.ainvoke({"url": url, "content": content})
+            category = response.content.strip().title()
+            categorized[category].append(url)
+        except Exception as e:
+            categorized["Processing Errors"].append(url)
+    
+    # Process with concurrency control
+    await asyncio.gather(*[process_record(r) for r in records])
+    
+    return dict(categorized)
+
+# 3. Updated agent class
+class TabMateAgent:
+    def __init__(self):
+        self.config = self.load_config()
+        self.llm = ChatOpenAI(model=self.config['llm']['model'])
+        
+    def load_config(self):
+        with open('src/config.yaml') as f:
+            return yaml.safe_load(f)
+    
+    async def process_urls(self, urls: List[str]):
+        agent = Agent(
+            name="TabMateProcessor",
+            instructions="Process URLs through MCP pipeline",
+            tools=[ url_content_fetcher, qdrant_store_tool, url_categorizer_tool],
+            model="gpt-4o-mini"
+        )
+        
+        result = await Runner.run(
+            agent,
+            f"""
+            Process these URLs: {urls}
+            1. Scrape content using url content fetcher
+            2. Store the fetched content in qdrant vector db
+            3. Go over the content in the qdrant db and categorize the urls based on their contents
+            4. Give me a json structure that has the title of the web page, the url, and the category 
+            """
+        )
+        return result.final_output
+
+async def main():
+    print("Running agent pipeline...")
+    processor = TabMateAgent()
+    urls = [
+        "https://www.amazon.com/s?k=laptop+stand&crid=1TQOX6D88AYMB&sprefix=laptop+stand%2Caps%2C244&ref=nb_sb_noss_1",
+        "https://open.spotify.com",
+        "https://medium.com/tag/artificial-intelligence"
+    ]
+    
+    result = await processor.process_urls(urls)
+    print("Processing Result:")
+    print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())

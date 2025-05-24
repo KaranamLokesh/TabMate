@@ -1,0 +1,14 @@
+qdrant:
+  host: localhost
+  port: 6333
+  collection: web_content
+  vector_size: 3072  # For text-embedding-3-large
+
+llm:
+  model: gpt-4o-mini
+  temperature: 0.7
+
+embeddings:
+  model: text-embedding-3-large
+  size: 3072  # Must match vector_size above
+  chunk_size: 1000
